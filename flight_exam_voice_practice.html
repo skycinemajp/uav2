@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音声反復練習 — JU324A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1420;
+    --panel:#101E2C;
+    --panel-alt:#16283A;
+    --line:#28405A;
+    --text:#E4ECF2;
+    --muted:#7E97AC;
+    --amber:#E3A83B;
+    --success:#4FAE7C;
+    --error:#D9614E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans JP',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:720px; margin:0 auto; padding:28px 20px 60px; }
+  .callsign{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em; color:var(--amber); }
+  h1{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:26px; margin:6px 0 4px; letter-spacing:-0.01em; }
+  .sub{ color:var(--muted); font-size:13.5px; line-height:1.6; margin:0 0 18px; max-width:58ch; }
+
+  .settings{
+    display:flex; flex-wrap:wrap; gap:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:4px;
+    padding:12px 16px; margin-bottom:18px;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);
+    align-items:center;
+  }
+  .settings label{ display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .settings select{
+    background:var(--panel-alt); color:var(--text); border:1px solid var(--line);
+    border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:3px 6px;
+  }
+  .unsupported{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--error);
+    border:1px solid var(--error); border-radius:4px; padding:10px 14px; margin-bottom:18px;
+  }
+
+  .tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .tab{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; padding:8px 12px;
+    border:1px solid var(--line); border-radius:3px; background:var(--panel);
+    color:var(--muted); cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  .tab:hover{border-color:#3C5875;}
+  .tab.active{ border-color:var(--amber); color:var(--amber); }
+
+  .phase-track{ display:flex; gap:4px; margin-bottom:8px; }
+  .phase-track .dot{ flex:1; height:3px; background:var(--line); border-radius:2px; }
+  .phase-track .dot.done{background:var(--success);}
+  .phase-track .dot.current{background:var(--amber);}
+
+  .streak-row{
+    display:flex; gap:6px; align-items:center; margin-bottom:20px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);
+  }
+  .streak-dot{ width:9px; height:9px; border-radius:50%; border:1px solid var(--line); }
+  .streak-dot.filled{ background:var(--success); border-color:var(--success); }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:20px 22px; margin-bottom:16px; }
+  .role-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; color:var(--muted);
+    margin-bottom:8px; display:flex; align-items:center; gap:8px; justify-content:space-between;
+  }
+  .role-tag .left{ display:flex; align-items:center; gap:8px; }
+  .role-tag .sq{width:6px;height:6px;background:var(--amber);}
+  .listen-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:4px 9px; border-radius:3px;
+    border:1px solid var(--line); background:var(--panel-alt); color:var(--muted); cursor:pointer;
+  }
+  .listen-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .examiner-text{ font-size:16px; line-height:1.85; }
+
+  .history{ margin-bottom:16px; }
+  .history-item{ padding:14px 0; border-bottom:1px solid var(--line); font-size:14px; line-height:1.75; }
+  .history-item:last-child{border-bottom:none;}
+  .history-item.operator .role-tag .sq{background:var(--success);}
+  .history-item .body{color:#C4D3DF;}
+
+  .ptt-area{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px 0 4px; }
+  .ptt-btn{
+    width:100%;
+    font-family:'IBM Plex Mono',monospace; font-size:13.5px; letter-spacing:0.06em;
+    padding:22px 16px; border-radius:6px; border:1px solid var(--amber);
+    background:var(--panel-alt); color:var(--amber); cursor:pointer;
+    user-select:none; -webkit-user-select:none; touch-action:none;
+    transition:background .1s, color .1s;
+  }
+  .ptt-btn.active{ background:var(--error); border-color:var(--error); color:#fff; }
+  .ptt-btn:disabled{ opacity:0.35; cursor:default; }
+  .ptt-hint{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
+
+  .transcript-box{
+    width:100%; min-height:70px; background:var(--panel-alt); border:1px solid var(--line);
+    border-radius:4px; color:var(--text); font-size:15px; line-height:1.7; padding:14px;
+    margin-top:6px; white-space:pre-wrap;
+  }
+  .transcript-box.placeholder{ color:#4F6479; }
+
+  textarea.manual{
+    width:100%; min-height:70px; background:var(--panel-alt); border:1px solid var(--line);
+    border-radius:4px; color:var(--text); font-family:'Noto Sans JP',sans-serif; font-size:14px;
+    line-height:1.7; padding:12px; resize:vertical; margin-top:8px;
+  }
+  textarea.manual:focus{outline:none; border-color:var(--amber);}
+
+  .controls{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; width:100%; }
+  button{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:0.04em;
+    padding:10px 16px; border-radius:3px; border:1px solid var(--line);
+    background:var(--panel-alt); color:var(--text); cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  button:hover{border-color:#3C5875;}
+  button.primary{ background:var(--amber); border-color:var(--amber); color:#1A1204; font-weight:500; }
+  button.primary:hover{filter:brightness(1.05);}
+
+  .verdict{ margin-top:16px; padding:16px 18px; border-radius:4px; border:1px solid; font-size:14px; line-height:1.7; }
+  .verdict.pass{border-color:var(--success); background:rgba(79,174,124,0.08);}
+  .verdict.fail{border-color:var(--error); background:rgba(217,97,78,0.08);}
+  .verdict-head{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.08em; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;}
+  .verdict.pass .verdict-head{color:var(--success);}
+  .verdict.fail .verdict-head{color:var(--error);}
+  .ref-text{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); color:var(--muted); }
+  .ref-text b{color:var(--text); font-weight:500;}
+  .chunks{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .chunk{ font-size:12px; padding:3px 9px; border-radius:20px; border:1px solid var(--line); color:var(--muted); }
+  .chunk.ok{border-color:var(--success); color:var(--success);}
+  .chunk.ng{border-color:var(--error); color:var(--error);}
+
+  .complete{ text-align:center; padding:40px 20px; }
+  .complete .big{ font-family:'Space Grotesk',sans-serif; font-size:22px; color:var(--success); margin-bottom:8px; }
+  .complete p{color:var(--muted); font-size:13.5px;}
+
+  .meta-row{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-bottom:10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="callsign">JU324A · 2等無人航空機操縦士 実技審査</div>
+  <h1>音声反復・暗記練習</h1>
+  <p class="sub">試験官の発言は自動で読み上げられます。PTTボタンを押している間に操縦者として声に出して答え、離すと送信・判定されます。正しく言えても、設定した回数連続で正解するまで次には進みません。</p>
+
+  <div class="settings" id="settingsRow"></div>
+  <div id="unsupportedNote"></div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="phase-track" id="phaseTrack"></div>
+  <div class="streak-row" id="streakRow"></div>
+
+  <div id="stage"></div>
+</div>
+
+<script>
+const SECTIONS = [{"title": "飛行前点検", "turns": [{"speaker": "試験官", "text": "はい、これから飛行前点検を行います。点検用紙を使って航空法で定められる点検内容をはっきりとした声で行ってください。なお、電源を入れて確認する時は試験官に確認を取ってください。必要な準備の確認を行います。体調に問題ありませんか？"}, {"speaker": "操縦者", "text": "はい、体調問題ありません。"}, {"speaker": "試験官", "text": "はい、今回の飛行に対して航空法に基づく手続き、必要事項の確認をしてください。"}, {"speaker": "操縦者", "text": "今回は屋内での飛行になるため、航空法適用外で問題ありません。"}, {"speaker": "試験官", "text": "はい。空域および気象状況の確認を行います。飛行空域の周辺並びに気象状況、風速を確認してください。"}, {"speaker": "操縦者", "text": "はい。周辺の障害物特にありません。屋内での飛行になるため気象状況問題ありません。風速を確認します。風速5m毎秒未満のため問題ありません。"}, {"speaker": "試験官", "text": "はい。それでは飛行前点検を開始いたします。日常点検記録に基づき、飛行前点検をはっきりとした声で始めてください。"}, {"speaker": "操縦者", "text": "はい、飛行前点検を開始します。実施年月日、2025年6月16日と記載します。実施場所、テクニカルセンターと記入します。実施者、ハミング太郎と記入します。無人航空機の登録記号を記入します。JU324A...機体識別表示の確認を行います。剥がれがないか、記号が鮮明に見えるか確認を行います。問題ありません。全般、プロペラ外観、歪みがないか確認を行います。問題ありません。モーター外観、回転、異音の確認を行います。問題ありません。フレーム外観、損傷、歪み確認を行います。問題ありません。ネジ、コネクター、ケーブルと機器の取り付け状態の確認を行います。問題ありません。ケーブルは内蔵型のため点検を行いません。操縦装置、外観、スティックの緩み、スイッチの確認を行います。問題ありません。機体カメラの確認。カメラの損傷がないか確認を行います。問題ありません。灯火の確認。灯火の損傷がないか確認を行います。問題ありません。電源系統の確認。送信機と機体が正常に作動するか確認を行います。電源を入れてもよろしいでしょうか？"}, {"speaker": "試験官", "text": "はい、お願いします。"}, {"speaker": "操縦者", "text": "はい、電源を入れます。まずは送信機の電源をオンにします。続いて機体の電源をオンにします。送信機、機体が正常に作動したことを確認しました。現在の時刻を離陸時刻として記載しますので、時刻を教えてください。"}, {"speaker": "試験官", "text": "はい、現在の時刻12時5分になります。"}, {"speaker": "操縦者", "text": "12時5分、点検シートに記入します。バッテリーの確認。機体、送信機の充電状況は問題ないか確認を行います。機体のバッテリー97%、問題ありません。送信機のバッテリー90%、問題ありません。操縦装置、操縦モードの確認を行います。操縦モード、モード2を確認しました。問題ありません。リモートIDの確認。リモートIDの電源が入っているか、インポート済みかの確認を行います。リモートIDインポート済みを確認しました。問題ありません。画像伝送状況の確認。機体カメラの映像が正常に送信機に反映されているか確認を行います。問題ありません。灯火の確認。無人航空機の灯火が正常に点灯しているか確認を行います。問題ありません。以上で飛行前点検を終了します。"}]}, {"title": "飛行点検", "turns": [{"speaker": "試験官", "text": "飛行点検を開始いたします。高度1.5mまで上昇し、各部の確認を行ってください。"}, {"speaker": "操縦者", "text": "はい、初めに通信系統の確認を行います。機体、送信機の通信状況、RC電波5本と表記されているため問題ありません。続いてGPSの確認を行います。GPS19機受信してます。屋内での飛行のため問題ありません。周囲の安全確認を行います。周辺の障害物及び気象状況、問題ありません。モーター作動します。モーター異音等ありません。離陸します。高度1.5mまで上昇しました。ホバリング異常ありません。次に機体の動作確認を行います。動作確認問題ありません。カメラの健全性の確認を行います。カメラ問題ありません。以上で飛行点検を終了します。"}, {"speaker": "試験官", "text": "それでは着陸を行ってください。"}, {"speaker": "操縦者", "text": "周囲状況及び着陸地点、問題ありません。着陸します。着陸しました。モーターの停止を確認しました。"}, {"speaker": "試験官", "text": "それでは日常点検記録に飛行後の点検結果を記入してください。"}, {"speaker": "操縦者", "text": "はい。通信系統の確認、問題ありませんでした。周辺の安全確認、問題ありませんでした。モーター異常の確認、問題ありませんでした。自動制御装置の確認、問題ありませんでした。スティックの健全性、推進系統の確認、問題ありませんでした。カメラの健全性、問題ありませんでした。周辺の安全確認、問題ありませんでした。記入完了しました。"}]}, {"title": "飛行後点検", "turns": [{"speaker": "試験官", "text": "飛行後点検を開始いたします。先ほど点検時にお渡しした日常点検記録を使用し、飛行後点検をはっきりとした声で開始してください。"}, {"speaker": "操縦者", "text": "はい。飛行後点検を開始します。送信機及び機体の電源を切ります。送信機、機体の電源が切れたことを確認しました。現在の時刻を着陸時刻として記載するので時刻を教えてください。"}, {"speaker": "試験官", "text": "はい。現在の時刻12時50分になります。"}, {"speaker": "操縦者", "text": "12時50分、点検シートに記入します。機体識別表示の確認。剥がれがないかの確認を行います。問題ありません。操縦装置外観、スイッチ、損傷ないか確認します。問題ありません。機体全般、ネジ、コネクター、ケーブル等の機器の取り付け状態の確認を行います。問題ありません。ケーブルに関しては内蔵型ですので点検を行いません。プロペラの損傷、歪みの確認を行います。問題ありません。フレームの損傷、歪みの確認を行います。問題ありません。機体にゴミの付着がないか確認を行います。問題ありません。本体やモーターに異常な発熱がないか確認を行います。問題ありません。飛行後点検、異常ありませんでしたので、点検異常なしにチェックをします。特記事項に関しては異常がなかったので記載を行いません。以上で飛行後点検を終了します。"}]}, {"title": "飛行記録の作成", "turns": [{"speaker": "試験官", "text": "それでは次のページをめくっていただき飛行記録の作成を行ってください。"}, {"speaker": "操縦者", "text": "はい、飛行記録の作成を行います。まずは無人航空機の登録記号を記入します。JU324A 02D3D1...続いて飛行年月日を記入します。2025年6月16日、飛行させた者の氏名を記入します。ハミング太郎。係留の有無に関しては今回なしですので、なしと丸をつけます。飛行の目的を記入します。実技審査と記入します。飛行概要を記入します。30m未満と記入します。離陸場所を記入します。テクニカルセンターと記入します。着陸場所を記入します。こちらもテクニカルセンターと記入します。離陸時刻を記入します。12時5分と記入します。着陸時刻を記入します。12時50分と記入します。飛行時間を記入します。今回は45分と記入します。総飛行時間も同じく45分と記入します。飛行の安全に影響のあった事項は特にありませんでしたので、特になしと記入します。以上で無人航空機の飛行記録の作成を終了します。"}]}];
+const ALL_TURNS = SECTIONS.map(s => s.turns).reduce((a,b)=>a.concat(b), []);
+
+let currentFlow = { label: '通し（全編）', turns: ALL_TURNS };
+let idx = 0;
+let history = [];
+let consecutiveCorrect = 0;
+
+let requiredStreak = 2;
+let autoPlay = true;
+let autoJudge = true;
+
+// ---- feature detection ----
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const hasSTT = !!SpeechRecognitionAPI;
+const hasTTS = 'speechSynthesis' in window;
+
+let recognition = null;
+if(hasSTT){
+  recognition = new SpeechRecognitionAPI();
+  recognition.lang = 'ja-JP';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+}
+
+let availableVoices = [];
+let selectedVoiceURI = null;
+let speechRate = 0.95;
+let speechPitch = 1.0;
+
+function scoreVoiceNaturalness(v){
+  // Heuristic: network/cloud voices (localService:false) and voices whose
+  // name signals a higher-quality engine tend to sound far less robotic
+  // than the compact on-device default voices most OSes ship with.
+  let score = 0;
+  if(v.localService === false) score += 10;
+  const name = v.name.toLowerCase();
+  if(name.includes('google')) score += 6;
+  if(name.includes('natural') || name.includes('neural')) score += 8;
+  if(name.includes('enhanced') || name.includes('premium')) score += 6;
+  if(name.includes('siri')) score += 4;
+  if(name.includes('kyoko') || name.includes('o-ren') || name.includes('otoya')) score += 3;
+  if(name.includes('compact')) score -= 4;
+  return score;
+}
+
+function loadVoices(){
+  const all = window.speechSynthesis.getVoices();
+  availableVoices = all.filter(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+  if(availableVoices.length === 0) return;
+  if(!selectedVoiceURI || !availableVoices.some(v => v.voiceURI === selectedVoiceURI)){
+    const best = [...availableVoices].sort((a,b) => scoreVoiceNaturalness(b) - scoreVoiceNaturalness(a))[0];
+    selectedVoiceURI = best.voiceURI;
+  }
+  if(document.getElementById('settingsRow')){ buildSettings(); }
+}
+if(hasTTS){
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function refreshVoiceSelect(){
+  const sel = document.getElementById('voiceSelect');
+  if(!sel) return;
+  sel.innerHTML = availableVoices.map(v =>
+    `<option value="${v.voiceURI}" ${v.voiceURI===selectedVoiceURI?'selected':''}>${v.name}${v.localService===false?' (高品質)':''}</option>`
+  ).join('');
+}
+
+function speak(text){
+  if(!hasTTS || !text) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP';
+  u.rate = speechRate;
+  u.pitch = speechPitch;
+  const voice = availableVoices.find(v => v.voiceURI === selectedVoiceURI);
+  if(voice) u.voice = voice;
+  window.speechSynthesis.speak(u);
+}
+
+// ---- matching logic ----
+function bigrams(str){
+  const arr=[];
+  for(let i=0;i<str.length-1;i++) arr.push(str.substr(i,2));
+  if(arr.length===0 && str.length>0) arr.push(str);
+  return arr;
+}
+function jaccard(a,b){
+  const setA=new Set(a), setB=new Set(b);
+  if(setA.size===0 && setB.size===0) return 1;
+  let inter=0;
+  setA.forEach(x=>{ if(setB.has(x)) inter++; });
+  const union=new Set([...setA,...setB]).size;
+  return union===0?0:inter/union;
+}
+function normalize(s){
+  return s.replace(/[、。！？\s「」『』\.,!?]/g,'');
+}
+function bestMatchScore(chunkRaw, answerRaw){
+  const chunk = normalize(chunkRaw);
+  const answer = normalize(answerRaw);
+  if(chunk.length===0) return 1;
+  if(answer.includes(chunk)) return 1;
+  const cb = bigrams(chunk);
+  let best = 0;
+  const winLen = Math.max(chunk.length, 2);
+  for(let i=0;i<=Math.max(answer.length-1,0);i++){
+    const window = answer.substr(i, winLen);
+    if(window.length < 2) continue;
+    const score = jaccard(cb, bigrams(window));
+    if(score>best) best=score;
+  }
+  const wholeScore = jaccard(cb, bigrams(answer));
+  return Math.max(best, wholeScore);
+}
+function judge(expectedText, answerText){
+  const chunks = expectedText.split(/[、。]/).map(s=>s.trim()).filter(s=>s.length>=2);
+  const results = chunks.map(c => ({ chunk:c, score: bestMatchScore(c, answerText) }));
+  const matched = results.filter(r => r.score >= 0.45);
+  const ratio = chunks.length ? matched.length/chunks.length : 1;
+  return { pass: ratio >= 0.6, ratio, results };
+}
+
+// ---- settings UI ----
+function buildSettings(){
+  const row = document.getElementById('settingsRow');
+  row.innerHTML = `
+    <label><input type="checkbox" id="autoPlayChk" ${autoPlay?'checked':''}> 試験官の発言を自動読み上げ</label>
+    <label>必要連続正解数
+      <select id="streakSelect">
+        <option value="1">1回</option>
+        <option value="2" selected>2回</option>
+        <option value="3">3回</option>
+      </select>
+    </label>
+    ${hasSTT ? `<label><input type="checkbox" id="autoJudgeChk" ${autoJudge?'checked':''}> 発話終了で自動判定</label>` : ''}
+    ${hasTTS ? `
+      <label>音声
+        <select id="voiceSelect"></select>
+      </label>
+      <label>速さ
+        <select id="rateSelect">
+          <option value="0.85">ゆっくり</option>
+          <option value="0.95" selected>標準</option>
+          <option value="1.1">やや速い</option>
+        </select>
+      </label>
+      <span class="listen-btn" id="previewVoiceBtn">🔊 試聴</span>
+    ` : ''}
+  `;
+  document.getElementById('autoPlayChk').onchange = e => { autoPlay = e.target.checked; };
+  document.getElementById('streakSelect').value = String(requiredStreak);
+  document.getElementById('streakSelect').onchange = e => { requiredStreak = parseInt(e.target.value,10); render(); };
+  if(hasSTT){
+    document.getElementById('autoJudgeChk').onchange = e => { autoJudge = e.target.checked; };
+  }
+  if(hasTTS){
+    refreshVoiceSelect();
+    document.getElementById('voiceSelect').onchange = e => { selectedVoiceURI = e.target.value; };
+    document.getElementById('rateSelect').onchange = e => { speechRate = parseFloat(e.target.value); };
+    document.getElementById('previewVoiceBtn').onclick = () => speak('これから飛行前点検を行います。点検用紙を使って点検内容をはっきりとした声で行ってください。');
+  }
+
+  const note = document.getElementById('unsupportedNote');
+  const notes = [];
+  if(!hasSTT){
+    notes.push('この端末・ブラウザは音声認識に対応していません。下部のテキスト欄に発言内容を入力して判定してください（読み上げ機能は利用できます）。');
+  }
+  if(hasTTS && availableVoices.length && availableVoices.every(v => v.localService !== false)){
+    notes.push('この端末では標準の日本語音声（ロボット的な声）しか見つかりませんでした。より自然な声にするには、端末やブラウザの設定でネットワーク音声・高品質音声（例: Chromeの「Google 日本語」、iOS/macOSの「拡張版/プレミアム」音声）を追加してから、上の「音声」欄で選び直してください。');
+  }
+  note.innerHTML = notes.map(n => `<div class="unsupported">${n}</div>`).join('');
+}
+
+// ---- tabs ----
+function buildTabs(){
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+  const options = [{label:'通し（全編）', turns: ALL_TURNS}].concat(
+    SECTIONS.map(s => ({label:s.title, turns:s.turns}))
+  );
+  options.forEach(opt=>{
+    const btn = document.createElement('div');
+    btn.className = 'tab' + (opt.label===currentFlow.label ? ' active':'');
+    btn.textContent = opt.label;
+    btn.onclick = () => { selectFlow(opt); };
+    tabsEl.appendChild(btn);
+  });
+}
+function selectFlow(opt){
+  currentFlow = opt;
+  idx = 0;
+  history = [];
+  consecutiveCorrect = 0;
+  buildTabs();
+  render();
+}
+
+function buildPhaseTrack(){
+  const track = document.getElementById('phaseTrack');
+  track.innerHTML='';
+  const pairCount = Math.ceil(currentFlow.turns.length/2);
+  for(let i=0;i<pairCount;i++){
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < idx/2 ? ' done' : (i===Math.floor(idx/2) ? ' current' : ''));
+    track.appendChild(d);
+  }
+}
+function buildStreakRow(){
+  const row = document.getElementById('streakRow');
+  if(idx >= currentFlow.turns.length){ row.innerHTML=''; return; }
+  let dots = '';
+  for(let i=0;i<requiredStreak;i++){
+    dots += `<span class="streak-dot ${i<consecutiveCorrect?'filled':''}"></span>`;
+  }
+  row.innerHTML = `<span>この項目の連続正解:</span>${dots}<span>(${consecutiveCorrect}/${requiredStreak})</span>`;
+}
+
+// ---- main render ----
+function render(){
+  buildPhaseTrack();
+  buildStreakRow();
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+
+  if(history.length){
+    const h = document.createElement('div');
+    h.className = 'panel history';
+    history.forEach(item=>{
+      const row = document.createElement('div');
+      row.className = 'history-item ' + (item.speaker==='操縦者' ? 'operator':'examiner');
+      row.innerHTML = `<div class="role-tag"><span class="left"><span class="sq"></span>${item.speaker}</span></div><div class="body">${item.text}</div>`;
+      h.appendChild(row);
+    });
+    stage.appendChild(h);
+  }
+
+  if(idx >= currentFlow.turns.length){
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    const c = document.createElement('div');
+    c.className = 'panel complete';
+    c.innerHTML = `<div class="big">— 判定終了 —</div><p>すべての項目で規定回数の正解を達成しました。お疲れさまでした。</p>`;
+    const btn = document.createElement('button');
+    btn.className='primary';
+    btn.textContent='最初からやり直す';
+    btn.onclick = ()=>{ idx=0; history=[]; consecutiveCorrect=0; render(); };
+    c.appendChild(document.createElement('br'));
+    c.appendChild(btn);
+    stage.appendChild(c);
+    return;
+  }
+
+  const examinerTurn = currentFlow.turns[idx];
+  const operatorTurn = currentFlow.turns[idx+1];
+
+  const ePanel = document.createElement('div');
+  ePanel.className = 'panel';
+  ePanel.innerHTML = `
+    <div class="meta-row"><span>試験官 発言</span><span>STEP ${Math.floor(idx/2)+1} / ${Math.ceil(currentFlow.turns.length/2)}</span></div>
+    <div class="role-tag">
+      <span class="left"><span class="sq"></span>試験官</span>
+      ${hasTTS ? '<span class="listen-btn" id="replayBtn">🔊 もう一度聞く</span>' : ''}
+    </div>
+    <div class="examiner-text">${examinerTurn.text}</div>
+  `;
+  stage.appendChild(ePanel);
+  if(hasTTS){
+    document.getElementById('replayBtn').onclick = () => speak(examinerTurn.text);
+  }
+
+  const iPanel = document.createElement('div');
+  iPanel.className = 'panel';
+  iPanel.innerHTML = `<div class="role-tag"><span class="left"><span class="sq"></span>操縦者（あなたの応答）</span></div>`;
+
+  const pttArea = document.createElement('div');
+  pttArea.className = 'ptt-area';
+
+  let liveTranscript = '';
+  const transcriptBox = document.createElement('div');
+  transcriptBox.className = 'transcript-box placeholder';
+  transcriptBox.textContent = hasSTT ? 'PTTボタンを押して話してください…' : '';
+
+  const manualTa = document.createElement('textarea');
+  manualTa.className = 'manual';
+  manualTa.placeholder = hasSTT ? '（音声認識の結果をここで編集できます。手入力も可）' : 'ここに操縦者としての発言を入力してください…';
+
+  if(hasSTT){
+    const pttBtn = document.createElement('button');
+    pttBtn.className = 'ptt-btn';
+    pttBtn.textContent = '🎙 押して話す（PTT）';
+    pttArea.appendChild(pttBtn);
+    const hint = document.createElement('div');
+    hint.className = 'ptt-hint';
+    hint.textContent = 'ボタンを押している間、操縦者として声に出して発言してください。離すと送信されます。';
+    pttArea.appendChild(hint);
+    pttArea.appendChild(transcriptBox);
+
+    let recActive = false;
+    recognition.onresult = (e) => {
+      let finalText = '';
+      let interim = '';
+      for(let i=0;i<e.results.length;i++){
+        if(e.results[i].isFinal) finalText += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
+      }
+      liveTranscript = (finalText + interim).trim();
+      transcriptBox.textContent = liveTranscript || 'PTTボタンを押して話してください…';
+      transcriptBox.classList.toggle('placeholder', !liveTranscript);
+      manualTa.value = liveTranscript;
+    };
+    recognition.onerror = () => { stopRec(); };
+    recognition.onend = () => {
+      pttBtn.classList.remove('active');
+      pttBtn.textContent = '🎙 押して話す（PTT）';
+      recActive = false;
+      if(autoJudge && liveTranscript.trim()){
+        doJudge(liveTranscript, operatorTurn.text, iPanel, transcriptBox, manualTa);
+      }
+    };
+    function startRec(){
+      if(recActive) return;
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      liveTranscript = '';
+      transcriptBox.textContent = '認識中…';
+      transcriptBox.classList.remove('placeholder');
+      try{ recognition.start(); }catch(e){}
+      recActive = true;
+      pttBtn.classList.add('active');
+      pttBtn.textContent = '🔴 送信中（離すと確定）';
+    }
+    function stopRec(){
+      if(!recActive) return;
+      try{ recognition.stop(); }catch(e){}
+    }
+    pttBtn.addEventListener('mousedown', startRec);
+    pttBtn.addEventListener('mouseup', stopRec);
+    pttBtn.addEventListener('mouseleave', ()=>{ if(recActive) stopRec(); });
+    pttBtn.addEventListener('touchstart', e=>{ e.preventDefault(); startRec(); });
+    pttBtn.addEventListener('touchend', e=>{ e.preventDefault(); stopRec(); });
+  }
+
+  iPanel.appendChild(pttArea);
+  iPanel.appendChild(manualTa);
+
+  const controls = document.createElement('div');
+  controls.className = 'controls';
+  const judgeBtn = document.createElement('button');
+  judgeBtn.className = 'primary';
+  judgeBtn.textContent = 'このテキストで判定する';
+  judgeBtn.onclick = () => doJudge(manualTa.value, operatorTurn.text, iPanel, transcriptBox, manualTa);
+  controls.appendChild(judgeBtn);
+  iPanel.appendChild(controls);
+
+  const verdictHolder = document.createElement('div');
+  verdictHolder.id = 'verdictHolder';
+  iPanel.appendChild(verdictHolder);
+
+  stage.appendChild(iPanel);
+
+  if(autoPlay && hasTTS){
+    setTimeout(() => speak(examinerTurn.text), 250);
+  }
+}
+
+function doJudge(answer, expectedText, iPanel, transcriptBox, manualTa){
+  const holder = iPanel.querySelector('#verdictHolder');
+  holder.innerHTML = '';
+  if(!answer || !answer.trim()) return;
+
+  const result = judge(expectedText, answer);
+  const v = document.createElement('div');
+  v.className = 'verdict ' + (result.pass ? 'pass':'fail');
+  const chunksHtml = result.results.map(r =>
+    `<span class="chunk ${r.score>=0.45?'ok':'ng'}">${r.chunk}</span>`
+  ).join('');
+
+  if(result.pass){
+    consecutiveCorrect++;
+    buildStreakRow();
+    if(consecutiveCorrect >= requiredStreak){
+      v.innerHTML = `<div class="verdict-head">判定：合格（${consecutiveCorrect}/${requiredStreak}）</div>規定回数に達しました。次の項目に進みます。<div class="chunks">${chunksHtml}</div>`;
+      holder.appendChild(v);
+      setTimeout(()=>{
+        history.push({ speaker:'試験官', text: currentFlow.turns[idx].text });
+        history.push({ speaker:'操縦者', text: answer });
+        idx += 2;
+        consecutiveCorrect = 0;
+        render();
+      }, 1100);
+    } else {
+      v.innerHTML = `<div class="verdict-head">判定：合格（${consecutiveCorrect}/${requiredStreak}）</div>正しく言えました。暗記のため、もう一度同じ内容を言ってください。<div class="chunks">${chunksHtml}</div>`;
+      holder.appendChild(v);
+      if(transcriptBox){ transcriptBox.textContent = 'PTTボタンを押して、もう一度話してください…'; transcriptBox.classList.add('placeholder'); }
+      if(manualTa) manualTa.value = '';
+    }
+  } else {
+    consecutiveCorrect = 0;
+    buildStreakRow();
+    v.innerHTML = `<div class="verdict-head">判定：要修正<span class="listen-btn" id="listenCorrectBtn" style="font-family:'IBM Plex Mono',monospace;">🔊 正しい言い方を聞く</span></div>
+      いくつかの要点が不足しています。言い直してください。
+      <div class="chunks">${chunksHtml}</div>
+      <div class="ref-text"><b>正しくは：</b>${expectedText}</div>`;
+    holder.appendChild(v);
+    const lb = document.getElementById('listenCorrectBtn');
+    if(lb && hasTTS) lb.onclick = () => speak(expectedText);
+    if(transcriptBox){ transcriptBox.textContent = 'PTTボタンを押して、もう一度話してください…'; transcriptBox.classList.add('placeholder'); }
+    if(manualTa) manualTa.value = '';
+  }
+}
+
+buildSettings();
+buildTabs();
+render();
+</script>
+</body>
+</html>
